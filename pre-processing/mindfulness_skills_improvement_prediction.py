@@ -7,6 +7,8 @@ import scipy as sp
 from scipy.signal import butter, filtfilt, medfilt, lfilter, sosfilt
 
 np.random.seed(42)
+
+
 def find_label(dataframe, target_column, PID, session):
     iteration = len(dataframe['PID'])
     for i in range(iteration):
@@ -16,6 +18,7 @@ def find_label(dataframe, target_column, PID, session):
         else:
             value = 0
     return value
+
 
 def butter_bandpass(lowcut, highcut, fs, order=2):
     nyq = 0.5 * fs
@@ -30,8 +33,8 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=2):
     y = sosfilt(sos, data)
     return y
 
+
 def savitzky_golay(y, window_size, order, deriv=0, rate=1):
-    import numpy as np
     from math import factorial
     try:
         window_size = np.abs(int(window_size))
@@ -42,22 +45,24 @@ def savitzky_golay(y, window_size, order, deriv=0, rate=1):
         raise TypeError("window_size size must be a positive odd number")
     if window_size < order + 2:
         raise TypeError("window_size is too small for the polynomials order")
-    order_range = range(order+1)
-    half_window = (window_size -1) // 2
+    order_range = range(order + 1)
+    half_window = (window_size - 1) // 2
     # precompute coefficients
-    b = np.mat([[k**i for i in order_range] for k in range(-half_window, half_window+1)])
-    m = np.linalg.pinv(b).A[deriv] * rate**deriv * factorial(deriv)
+    b = np.mat([[k ** i for i in order_range] for k in range(-half_window, half_window + 1)])
+    m = np.linalg.pinv(b).A[deriv] * rate ** deriv * factorial(deriv)
     # pad the signal at the extremes with
     # values taken from the signal itself
-    firstvals = y[0] - np.abs( y[1:half_window+1][::-1] - y[0] )
-    lastvals = y[-1] + np.abs(y[-half_window-1:-1][::-1] - y[-1])
+    firstvals = y[0] - np.abs(y[1:half_window + 1][::-1] - y[0])
+    lastvals = y[-1] + np.abs(y[-half_window - 1:-1][::-1] - y[-1])
     y = np.concatenate((firstvals, y, lastvals))
-    return np.convolve( m[::-1], y, mode='valid')
+    return np.convolve(m[::-1], y, mode='valid')
+
 
 def data_reshape(data):
     x = data
     y = x.reshape(x.shape[0], -1, 1)
     return y
+
 
 def unison_shuffled_copies(a, b):
     assert len(a) == len(b)
@@ -73,7 +78,6 @@ def processing(train, test):
     train = scaler.transform(train)
     test = scaler.transform(test)
     return train, test
-
 
 
 path = ""
@@ -95,13 +99,13 @@ negative_data_concentration_test = []
 negative_data_clarity_test = []
 negative_data_equanimity_test = []
 
-for file1 in glob.glob(path +"*.wav"):
+for file1 in glob.glob(path + "*.wav"):
     PID = int(file1[44:47])
     try:
         session = int(file1[49:51])
     except:
         session = int(file1[49])
-    
+
     if file1[-17:-4] == 'technic_audio':
         data, fs = librosa.load(file1, sr=11025)
         c_value_post = find_label(y_post, 'Concentration_1', PID, session)
@@ -111,14 +115,17 @@ for file1 in glob.glob(path +"*.wav"):
         c_value_pre = find_label(y_pre, 'Concentration_1', PID, session)
         s_value_pre = find_label(y_pre, 'SensoryClarity_1', PID, session)
         e_value_pre = find_label(y_pre, 'Equanimity_1', PID, session)
-        
+
         if int(session) in test_session:
-            for i in range(0, len(data), int(fs*120)):
-                data_chunk = data[i:int(i+fs*120)]
-                if i+int(fs*120) >len(data):
+            for i in range(0, len(data), int(fs * 120)):
+                data_chunk = data[i:int(i + fs * 120)]
+                if i + int(fs * 120) > len(data):
                     continue
-                data_chunk = librosa.feature.mfcc(y = data_chunk, sr=fs, n_mfcc=40, n_fft = 512, win_length=512, hop_length = 256)
-                
+                data_chunk = butter_bandpass_filter(data_chunk, 20, 1000, fs, order=2)
+                data_chunk = savitzky_golay(data_chunk, 101, 3)
+                data_chunk = librosa.feature.mfcc(y=data_chunk, sr=fs, n_mfcc=40, n_fft=512, win_length=512,
+                                                  hop_length=256)
+
                 if c_value_post > c_value_pre:
                     positive_data_concentration_test.append(data_chunk)
                 else:
@@ -134,11 +141,14 @@ for file1 in glob.glob(path +"*.wav"):
                 else:
                     negative_data_equanimity_test.append(data_chunk)
         else:
-            for i in range(0, len(data), int(fs*120)):
-                data_chunk = data[i:int(i+fs*120)]
-                if i+int(fs*120) >len(data):
+            for i in range(0, len(data), int(fs * 120)):
+                data_chunk = data[i:int(i + fs * 120)]
+                if i + int(fs * 120) > len(data):
                     continue
-                data_chunk = librosa.feature.mfcc(y = data_chunk, sr=fs, n_mfcc=40, n_fft = 512, win_length=512, hop_length = 256)
+                data_chunk = butter_bandpass_filter(data_chunk, 20, 1000, fs, order=2)
+                data_chunk = savitzky_golay(data_chunk, 101, 3)
+                data_chunk = librosa.feature.mfcc(y=data_chunk, sr=44100, n_mfcc=40, n_fft=512, win_length=512,
+                                                  hop_length=256)
 
                 if c_value_post > c_value_pre:
                     positive_data_concentration_train.append(data_chunk)
@@ -228,4 +238,3 @@ np.save('y_test_cl_label_mfcc.npy', y_test_cl)
 
 np.save('y_train_eq_label_mfcc.npy', y_train_eq)
 np.save('y_test_eq_label_mfcc.npy', y_test_eq)
-
