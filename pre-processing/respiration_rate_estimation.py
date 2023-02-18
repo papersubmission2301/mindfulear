@@ -105,8 +105,8 @@ for file1 in glob.glob(path1 +"*.wav"):
                         data_chunk = data[i:int(i+fs*15)]
                         if i+int(fs*15) >len(data):
                             continue
-                        data = butter_bandpass_filter(data_chunk, 20, 1000, fs, order = 2)
-                        data = savitzky_golay(data_chunk, 101, 3)
+                        data_chunk = butter_bandpass_filter(data_chunk, 20, 1000, fs, order = 2)
+                        data_chunk = savitzky_golay(data_chunk, 101, 3)
                         data_chunk = librosa.feature.mfcc(y = data_chunk, sr=fs, n_mfcc=40, n_fft = 512, win_length=512, hop_length = 256)
                         test_data.append(data_chunk)
                         
@@ -125,8 +125,8 @@ for file1 in glob.glob(path1 +"*.wav"):
                         data_chunk = data[i:int(i+fs*15)]
                         if i+int(fs*15) >len(data):
                             continue
-                        data = butter_bandpass_filter(data_chunk, 20, 1000, fs, order = 2)
-                        data = savitzky_golay(data_chunk, 101, 3)
+                        data_chunk = butter_bandpass_filter(data_chunk, 20, 1000, fs, order = 2)
+                        data_chunk = savitzky_golay(data_chunk, 101, 3)
                         data_chunk = librosa.feature.mfcc(y = data_chunk, sr=fs, n_mfcc=40, n_fft = 512, win_length= 512, hop_length = 256)
                         train_data.append(data_chunk)
                         
